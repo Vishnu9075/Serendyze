@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reddit Posts</title>
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Add any additional styling here */
+    </style>
+<script>
+  var clickCount = 0;
+  var postTimes = {}; // Object to track time spent on each post
+  var currentHoveredPost = null; // Variable to track the currently hovered post
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Event listener for mouseup (click) events
+    document.addEventListener("mouseup", function (event) {
+      clickCount++;
+
+      // Check if the clicked element is a post link
+      if (event.target.classList.contains('post-link')) {
+        var subreddit = event.target.dataset.subreddit;
+        trackClickEvent("post-link", event.target.dataset.postId, "Link clicked: " + event.target.innerText, subreddit);
+      }
+      // Check if the clicked element is an upvote
+      else if (event.target.closest('.upvotes')) {
+        trackClickEvent("upvote", getPostId(event), "Upvote clicked on post: " + getPostTitle(event));
+      }
+      // Check if the clicked element is a downvote
+      else if (event.target.closest('.downvotes')) {
+        trackClickEvent("downvote", getPostId(event), "Downvote clicked on post: " + getPostTitle(event));
+      }
+      // Check if the clicked element is an author
+      else if (event.target.closest('.author')) {
+        var authorName = event.target.closest('.author').innerText.trim();
+        trackClickEvent("author", getPostId(event), "Author clicked: " + authorName);
+      }
+      // Check if the clicked element is a subreddit link
+      else if (event.target.closest('.subreddit-link')) {
+        var subredditName = event.target.closest('.subreddit-link').innerText.trim();
+        var subredditId = event.target.closest('.subreddit-link').dataset.subredditId;
+        trackClickEvent("subreddit", getPostId(event), "Subreddit clicked: " + subredditName, subredditId);
+      }
+      // Check if the clicked element is the comments toggle
+      else if (event.target.closest('.comments-toggle')) {
+        trackClickEvent("comments-toggle", getPostId(event), "Comments toggle clicked for post: " + getPostTitle(event));
+      }
+      // Check if the clicked element is inside a comment
+      else if (event.target.closest('.comment')) {
+        var commentAuthor = event.target.closest('.comment').querySelector('.comment-author').innerText;
+        trackClickEvent("comment", getPostId(event), "Comment clicked by: " + commentAuthor);
+      }
+      // General click on a post item
+      else if (event.target.closest('.post-item')) {
+        trackClickEvent("post-item", getPostId(event), "Post item clicked: " + getPostTitle(event));
+      }
+    });
+
+    // Event listeners to track time spent on each post
+    document.querySelectorAll('.post-item').forEach(function (postItem) {
+      var postId = postItem.querySelector('.post-link').dataset.postId;
+
+      postItem.addEventListener('mouseenter', function () {
+        currentHoveredPost = postId;
+        if (!postTimes[postId]) {
+          postTimes[postId] = { timeSpent: 0, startTime: Date.now() };
+        } else {
+          postTimes[postId].startTime = Date.now(); // Reset start time when re-entered
+        }
+      });
+
+      postItem.addEventListener('mouseleave', function () {
+        if (currentHoveredPost === postId && postTimes[postId].startTime) {
+          postTimes[postId].timeSpent += Date.now() - postTimes[postId].startTime;
+          postTimes[postId].startTime = null; // Reset start time
+          currentHoveredPost = null;
+
+          // Check if time spent is more than 25 seconds to mark as "Read"
+          if (postTimes[postId].timeSpent >= 25000) {
+            markAsRead(postItem);
+          }
+        }
+      });
+    });
+
+    // Optionally log the time spent on each post periodically or when saving data
+    setInterval(logTimeSpentOnPosts, 10000); // Logs every 10 seconds for demonstration
+  });
+
+  // Function to log click events and send them to the backend
+  function trackClickEvent(type, postId, description, subredditId) {
+    var clickData = {
+      interaction_type: type,
+      postid: postId,
+      posttitle: description,
+      subreddit: subredditId,  // Pass the subreddit ID/name here
+      timestamp: new Date().toISOString()  // Capture current timestamp
+    };
+
+    console.log(clickData);  
+    // Send the click data to the Flask backend
+    $.ajax({
+        type: 'POST',
+        url: '/log_click',  // Flask route for logging clicks
+        data: JSON.stringify(clickData),
+        contentType: 'application/json',
+        success: function(response) {
+            console.log('Click logged and sent to Kafka:', response);
+        },
+        error: function(error) {
+            console.error('Error logging click:', error);
+        }
+    });
+  }
+
+  // Helper function to get the post ID from the clicked element
+  function getPostId(event) {
+    var postItem = event.target.closest('.post-item');
+    if (postItem) {
+      var postLink = postItem.querySelector('.post-link');
+      return postLink ? postLink.dataset.postId : 'Unknown Post ID';
+    }
+    return 'Unknown Post ID';
+  }
+
+  // Helper function to get the post title from the clicked element's closest post item
+  function getPostTitle(event) {
+    var postItem = event.target.closest('.post-item');
+    if (postItem) {
+      var postLink = postItem.querySelector('.post-link');
+      return postLink ? postLink.innerText : 'Unknown Post';
+    }
+    return 'Unknown Post';
+  }
+
+  // Function to log the time spent on each post
+  function logTimeSpentOnPosts() {
+    for (var postId in postTimes) {
+      var postTime = postTimes[postId].timeSpent;
+      console.log(`Time spent on post ID ${postId}: ${Math.floor(postTime / 1000)} seconds`);
+
+      // Check if time spent is more than 25 seconds to mark as "Read"
+      if (postTime >= 25000) {
+        var postItem = document.querySelector(`[data-post-id='${postId}']`).closest('.post-item');
+        markAsRead(postItem);
+      }
+    }
+  }
+
+  // Function to mark a post as "Read"
+  function markAsRead(postItem) {
+    if (postItem && !postItem.classList.contains('read')) {
+      var readLabel = document.createElement('span');
+      readLabel.className = 'read-label';
+      readLabel.innerText = 'Read';
+      postItem.appendChild(readLabel);
+      postItem.classList.add('read'); // Add a class to indicate it's marked
+      console.log(`Post marked as read: ${getPostTitle({ target: postItem })}`);
+    }
+  }
+
+</script>
+
+</head>
+<body>
+  <div class="header">
+    <h1>SERENDYZE</h1>
+    <p>Welcome, {{ session.get('username', 'Guest') }}!</p>
+  </div>
+  <div class="body-container">
+    <div class="posts-container">
+      <ul>
+        {% for post in posts %}
+        <li class="post-item">
+          <div class="author">
+            <span class="author-icon">👤</span>
+            <span>{{ post.author }}</span>
+            <div class="subreddit">
+              <a href="/r/{{ post.subreddit }}" class="subreddit-link" data-subreddit-id="{{ post.subreddit }}">
+                Posted in: r/{{ post.subreddit }}
+              </a> <!-- Subreddit under author name -->
+            </div>
+          </div>
+          <a href="{{ post.url }}" target="_blank" class="post-link" data-post-id="{{ post.id }}" data-subreddit="{{ post.subreddit }}">
+            {{ post.title }}
+          </a>
+          <div class="post-details">
+            {% if post.content %}
+              {% if post.content.endswith('.jpg') or post.content.endswith('.jpeg') or post.content.endswith('.png') or post.content.endswith('.gif') %}
+                <img src="{{ post.content }}" alt="{{ post.title }}" class="post-image" style="max-width: 100%; height: auto;" />
+              {% elif post.content.endswith('.mp4') or 'DASH_' in post.content %}
+                <video controls class="post-video" style="max-width: 100%; height: auto;">
+                  <source src="{{ post.content }}" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              {% else %}
+                <p>{{ post.content }}</p>
+              {% endif %}
+            {% else %}
+              <p>{{ post.text }}</p>
+            {% endif %}
+            <div class="votes">
+              <div class="upvotes">
+                <span class="upvote-symbol">⬆️</span>
+                <span>{{ post.ups }}</span>
+              </div>
+              <div class="downvotes">
+                <span class="downvote-symbol">⬇️</span>
+                <span>{{ post.downs }}</span>
+              </div>
+              <div class="rating">
+                Popularity Rating: {{ post.rating }}/5
+              </div>
+            </div>
+            <div class="comments-toggle">
+              <span class="comments-icon">💬</span> <span>View Comments</span>
+            </div>
+            <div class="comments" style="display: none;">
+              <h3>Comments:</h3>
+              {% for comment in post.comments %}
+              <div class="comment">
+                <p class="comment-author">{{ comment.author }}</p>
+                <p>{{ comment.text }}</p>
+                {% if comment.replies %}
+                <div class="replies-toggle">
+                  <span>View Replies</span>
+                </div>
+                <div class="replies" style="display: none;">
+                  {% for reply in comment.replies %}
+                  <div class="reply">
+                    <p class="reply-author">{{ reply.author }}</p>
+                    <p>{{ reply.text }}</p>
+
+                    <!-- Check for nested replies -->
+                    {% if reply.replies %}
+                    <div class="nested-replies-toggle">
+                      <span>View More Replies</span>
+                    </div>
+                    <div class="nested-replies" style="display: none;">
+                      {% for nested_reply in reply.replies %}
+                      <div class="nested-reply">
+                        <p class="nested-reply-author">{{ nested_reply.author }}</p>
+                        <p>{{ nested_reply.text }}</p>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
