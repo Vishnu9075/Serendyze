@@ -1,0 +1,144 @@
+/* General CSS */
+body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background-color: #dae0e6;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header CSS */
+.header {
+    background-color: #ff4500;
+    color: #fff;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.user-info {
+    font-weight: 400;
+    font-size: 1rem;
+}
+
+/* Body Container CSS */
+.body-container {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.posts-container {
+    width: 100%;
+    max-width: 800px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+/* Post Item CSS */
+.post-item {
+    border-bottom: 1px solid #e4e7eb;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #878a8c;
+    margin-bottom: 10px;
+}
+
+.post-link {
+    font-weight: 500;
+    font-size: 1.1rem;
+    color: #1a0dab;
+    text-decoration: none;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.post-link:hover {
+    text-decoration: underline;
+}
+
+.post-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #878a8c;
+}
+
+.votes {
+    display: flex;
+    align-items: center;
+}
+
+.upvotes {
+    margin-right: 10px;
+}
+
+.comments {
+    cursor: pointer;
+    color: #0079d3;
+}
+
+.comments:hover {
+    text-decoration: underline;
+}
+
+/* Comments Section CSS */
+.comments-section {
+    padding-top: 15px;
+    padding-left: 20px;
+    border-left: 2px solid #ccc;
+    margin-top: 10px;
+    color: #333;
+}
+
+.comment {
+    margin-top: 10px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.comment-author {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.comment-body {
+    margin-top: 5px;
+    font-size: 0.9rem;
+}
+
+.comment-score {
+    margin-top: 5px;
+    font-size: 0.8rem;
+    color: #878a8c;
+}
+
+/* Read Post Indicator */
+.post-item.read .post-link {
+    color: #6a6f77;
+    font-weight: 400;
+}
+
+/* Utility CSS */
+a {
+    text-decoration: none;
+}
+
+.read {
+    opacity: 0.7;
+}
